@@ -8,9 +8,11 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include "constants.h"
 
 // for convenience
 using json = nlohmann::json;
+using namespace std;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -93,40 +95,85 @@ int main() {
           double v = j[1]["speed"];
 
           /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-          double steer_value;
-          double throttle_value;
+           * TODO: Calculate steering angle and throttle using MPC.
+           *
+           * Both are in between [-1, 1].
+           *
+           */
+          // cross track error
+          assert(ptsx.size() == ptsy.size());
+
+          Eigen::VectorXd ptsx_loc(ptsx.size());
+          Eigen::VectorXd ptsy_loc(ptsy.size());
+
+          for (size_t i = 0; i < ptsx.size(); i++) {
+            const double dx = ptsx[i] - px;
+            const double dy = ptsy[i] - py;
+
+            ptsx_loc[i] = dx * cos(-psi) - dy * sin(-psi);
+            ptsy_loc[i] = dx * sin(-psi) + dy * cos(-psi);
+          }
+
+          auto coeffs = polyfit(ptsx_loc, ptsy_loc, 3);
+          double cte = polyeval(coeffs, 0);
+          double epsi = atan(coeffs[1]);
+
+          Eigen::VectorXd state(6);
+          state << 0, 0, 0, v, cte, epsi;
+
+          auto vars = mpc.Solve(state, coeffs);
+
+          double steer_value = vars[0];
+          // v setpoint
+          double vs = vars[1];
+          double throttle_value = vs;
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          // NOTE: Remember to divide by deg2rad(25) before you send the
+          // steering value back. Otherwise the values will be in between
+          // [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          msgJson["steering_angle"] = -steer_value / (deg2rad(25) / constants::Lf);
           msgJson["throttle"] = throttle_value;
 
-          //Display the MPC predicted trajectory 
+          // Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
+          //(mat.data(), mat.data() + mat.rows() * mat.cols());
+
           vector<double> mpc_y_vals;
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+          for (size_t i = 0; i < constants::N; i++) {
+            mpc_x_vals.push_back(vars[2 + 2 * i]);
+            mpc_y_vals.push_back(vars[3 + 2 * i]);
+          }
+
+          //.. add (x,y) points to list here, points are in reference to the
+          // vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          //Display the waypoints/reference line
+          // Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
-
+//.. add (x,y) points to list here, points are in reference to the
+// vehicle's coordinate system
+// the points in the simulator are connected by a Yellow line
+#if 1
+          for (int i=0; i<25; i++){
+            double dx = i * 1.5;
+            next_x_vals.push_back(dx);
+            next_y_vals.push_back(polyeval(coeffs, dx));
+          }
+#else
+          for (size_t i = 0; i < ptsx.size(); i++) {
+            next_x_vals.push_back(ptsx_loc[i]);
+            next_y_vals.push_back(ptsy_loc[i]);
+          }
+#endif
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
-
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
