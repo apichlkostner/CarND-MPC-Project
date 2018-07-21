@@ -3,6 +3,7 @@
 
 #include <vector>
 
+namespace mpc_project {
 class constants {
  public:
   static constexpr size_t N = 10;
@@ -10,5 +11,6 @@ class constants {
   static constexpr double facPenaltyActChange = 1.;
   static constexpr double Lf = 2.67;
 };
+}  // namespace mpc_project
 
 #endif

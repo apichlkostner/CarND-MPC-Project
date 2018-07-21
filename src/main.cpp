@@ -6,13 +6,15 @@
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
+#include "Logger.h"
 #include "MPC.h"
-#include "json.hpp"
 #include "constants.h"
+#include "json.hpp"
 
 // for convenience
 using json = nlohmann::json;
 using namespace std;
+using namespace mpc_project;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -78,11 +80,13 @@ int main() {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
+    static Logger measure_log("measurement.csv");
     string sdata = string(data).substr(0, length);
-    cout << sdata << endl;
+    // cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
+        static double time_average = 0.;
         auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
@@ -94,12 +98,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-           * TODO: Calculate steering angle and throttle using MPC.
-           *
-           * Both are in between [-1, 1].
-           *
-           */
           // cross track error
           assert(ptsx.size() == ptsy.size());
 
@@ -115,13 +113,36 @@ int main() {
           }
 
           auto coeffs = polyfit(ptsx_loc, ptsy_loc, 3);
-          double cte = polyeval(coeffs, 0);
           double epsi = atan(coeffs[1]);
+#if 1
+          double cte = polyeval(coeffs, 0);
+#else
+          double cte = cos(epsi) * polyeval(coeffs, 0);
+#endif
 
           Eigen::VectorXd state(6);
+          // in car refernce system pos_x = pos_y = psi = 0
           state << 0, 0, 0, v, cte, epsi;
 
+          auto start_time = std::chrono::system_clock::now();
+
           auto vars = mpc.Solve(state, coeffs);
+
+          auto end_time = std::chrono::system_clock::now();
+          std::chrono::duration<double> dur = end_time - start_time;
+          double calc_time = dur.count();
+          constexpr double fak_mov_average = 0.99;
+
+          if (time_average == 0.)
+            time_average = calc_time;
+          else
+            time_average = fak_mov_average * time_average +
+                           (1. - fak_mov_average) * calc_time;
+
+          std::cout << "Average time = " << time_average
+                    << " Calc time = " << calc_time << std::endl;
+
+          // accumulated_time += calc_time;
 
           double steer_value = vars[0];
           // v setpoint
@@ -132,7 +153,7 @@ int main() {
           // NOTE: Remember to divide by deg2rad(25) before you send the
           // steering value back. Otherwise the values will be in between
           // [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = -steer_value / (deg2rad(25) / constants::Lf);
+          msgJson["steering_angle"] = -steer_value / deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory
@@ -161,7 +182,7 @@ int main() {
 // vehicle's coordinate system
 // the points in the simulator are connected by a Yellow line
 #if 1
-          for (int i=0; i<25; i++){
+          for (int i = 0; i < 25; i++) {
             double dx = i * 1.5;
             next_x_vals.push_back(dx);
             next_y_vals.push_back(polyeval(coeffs, dx));
@@ -176,7 +197,8 @@ int main() {
           msgJson["next_y"] = next_y_vals;
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          // std::cout << msg << std::endl;
+
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

@@ -7,6 +7,7 @@
 using CppAD::AD;
 using namespace std;
 
+namespace mpc_project {
 // This value assumes the model presented in the classroom is used.
 //
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -29,14 +30,14 @@ double ref_v = 40;
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
 // when one variable starts and another ends to make our lifes easier.
-constexpr size_t x_start = 0;
-constexpr size_t y_start = x_start + N;
-constexpr size_t psi_start = y_start + N;
-constexpr size_t v_start = psi_start + N;
-constexpr size_t cte_start = v_start + N;
-constexpr size_t epsi_start = cte_start + N;
-constexpr size_t delta_start = epsi_start + N;
-constexpr size_t a_start = delta_start + N - 1;
+constexpr size_t kXStart = 0;
+constexpr size_t kYStart = kXStart + N;
+constexpr size_t kPsiStart = kYStart + N;
+constexpr size_t kVStart = kPsiStart + N;
+constexpr size_t kCteStart = kVStart + N;
+constexpr size_t kEpsiStart = kCteStart + N;
+constexpr size_t kDeltaStart = kEpsiStart + N;
+constexpr size_t kAStart = kDeltaStart + N - 1;
 
 class FG_eval {
  public:
@@ -54,21 +55,30 @@ class FG_eval {
 
     // Reference State Cost
     for (size_t t = 0; t < N; t++) {
-      fg[0] += 10 * CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += 10 * CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += 0.01 * CppAD::pow(vars[v_start + t] - ref_v, 2);
+#if 0
+      AD<double> cte = vars[kCteStart + t];
+      AD<double> epsi = vars[kEpsiStart + t];
+      AD<double> v = vars[kVStart + t] - ref_v;
+      fg[0] += 100 * cte * cte;
+      fg[0] += 100 * epsi * epsi;
+      fg[0] += 0.1 * v * v;
+#else
+      fg[0] += 100 * CppAD::pow(vars[kCteStart + t], 2);
+      fg[0] += 10 * CppAD::pow(vars[kEpsiStart + t], 2);
+      fg[0] += 0.1 * CppAD::pow(vars[kVStart + t] - ref_v, 2);
+#endif
     }
 
     // Minimize the use of actuators.
     for (size_t t = 0; t < N - 1; t++) {
-      fg[0] += constants::facPenaltyAct * CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += 0.5 * CppAD::pow(vars[a_start + t], 2);
+      fg[0] += CppAD::pow(vars[kDeltaStart + t], 2);
+      fg[0] += CppAD::pow(vars[kAStart + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (size_t t = 0; t < N - 2; t++) {
-      fg[0] += constants::facPenaltyActChange * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += constants::facPenaltyActChange * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += CppAD::pow(vars[kDeltaStart + t + 1] - vars[kDeltaStart + t], 2);
+      fg[0] += CppAD::pow(vars[kAStart + t + 1] - vars[kAStart + t], 2);
     }
 
     //
@@ -76,43 +86,41 @@ class FG_eval {
     //
 
     // Initial constraints
-    //
-    // We add 1 to each of the starting indices due to cost being located at
-    // index 0 of `fg`.
-    // This bumps up the position of all the other values.
-    fg[1 + x_start] = vars[x_start];
-    fg[1 + y_start] = vars[y_start];
-    fg[1 + psi_start] = vars[psi_start];
-    fg[1 + v_start] = vars[v_start];
-    fg[1 + cte_start] = vars[cte_start];
-    fg[1 + epsi_start] = vars[epsi_start];
+    constexpr size_t kConstrStart = 1;
+
+    fg[kConstrStart + kXStart] = vars[kXStart];
+    fg[kConstrStart + kYStart] = vars[kYStart];
+    fg[kConstrStart + kPsiStart] = vars[kPsiStart];
+    fg[kConstrStart + kVStart] = vars[kVStart];
+    fg[kConstrStart + kCteStart] = vars[kCteStart];
+    fg[kConstrStart + kEpsiStart] = vars[kEpsiStart];
 
     // The rest of the constraints
-    for (size_t t = 1; t < N; t++) {
-      AD<double> x1 = vars[x_start + t];
-      AD<double> y1 = vars[y_start + t];
-      AD<double> y0 = vars[y_start + t - 1];
-      AD<double> x0 = vars[x_start + t - 1];
-      AD<double> psi0 = vars[psi_start + t - 1];
-      AD<double> psi1 = vars[psi_start + t];
-      AD<double> v0 = vars[v_start + t - 1];
-      AD<double> v1 = vars[v_start + t];
-      AD<double> delta0 = vars[delta_start + t - 1];
+    for (size_t t = kConstrStart; t < N; t++) {
+      AD<double> x1 = vars[kXStart + t];
+      AD<double> y1 = vars[kYStart + t];
+      AD<double> y0 = vars[kYStart + t - 1];
+      AD<double> x0 = vars[kXStart + t - 1];
+      AD<double> psi0 = vars[kPsiStart + t - 1];
+      AD<double> psi1 = vars[kPsiStart + t];
+      AD<double> v0 = vars[kVStart + t - 1];
+      AD<double> v1 = vars[kVStart + t];
+      AD<double> delta0 = vars[kDeltaStart + t - 1];
       AD<double> f0 = coeffs_[0] + coeffs_[1] * x0;
       AD<double> psides0 = CppAD::atan(coeffs_[1]);
-      AD<double> a0 = vars[a_start + t - 1];
-      AD<double> cte0 = vars[cte_start + t - 1];
-      AD<double> epsi0 = vars[epsi_start + t - 1];
-      AD<double> cte1 = vars[cte_start + t];
-      AD<double> epsi1 = vars[epsi_start + t];
+      AD<double> a0 = vars[kAStart + t - 1];
+      AD<double> cte0 = vars[kCteStart + t - 1];
+      AD<double> epsi0 = vars[kEpsiStart + t - 1];
+      AD<double> cte1 = vars[kCteStart + t];
+      AD<double> epsi1 = vars[kEpsiStart + t];
 
-      fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
-      fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[1 + psi_start + t] = psi1 - (psi0 + v0 / Lf * delta0 * dt);
-      fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
-      fg[1 + cte_start + t] =
+      fg[kConstrStart + kXStart + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
+      fg[kConstrStart + kYStart + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
+      fg[kConstrStart + kPsiStart + t] = psi1 - (psi0 + v0 / Lf * delta0 * dt);
+      fg[kConstrStart + kVStart + t] = v1 - (v0 + a0 * dt);
+      fg[kConstrStart + kCteStart + t] =
           cte1 - ((y0 - f0) + (v0 * CppAD::sin(epsi0) * dt));
-      fg[1 + epsi_start + t] =
+      fg[kConstrStart + kEpsiStart + t] =
           epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
     }
   }
@@ -149,19 +157,19 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // Set the initial variable values
-  vars[x_start] = x;
-  vars[y_start] = y;
-  vars[psi_start] = psi;
-  vars[v_start] = v;
-  vars[cte_start] = cte;
-  vars[epsi_start] = epsi;
+  vars[kXStart] = x;
+  vars[kYStart] = y;
+  vars[kPsiStart] = psi;
+  vars[kVStart] = v;
+  vars[kCteStart] = cte;
+  vars[kEpsiStart] = epsi;
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
 
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
-  for (size_t i = 0; i < delta_start; i++) {
+  for (size_t i = 0; i < kDeltaStart; i++) {
     vars_lowerbound[i] = -1.0e19;
     vars_upperbound[i] = 1.0e19;
   }
@@ -169,14 +177,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
   // NOTE: Feel free to change this to something else.
-  for (size_t i = delta_start; i < a_start; i++) {
-    vars_lowerbound[i] = -0.436332 * Lf;
-    vars_upperbound[i] = 0.436332 * Lf;
+  for (size_t i = kDeltaStart; i < kAStart; i++) {
+    vars_lowerbound[i] = -0.436332 / 2;
+    vars_upperbound[i] = 0.436332 / 2;
   }
 
   // Acceleration/decceleration upper and lower limits.
   // NOTE: Feel free to change this to something else.
-  for (size_t i = a_start; i < n_vars; i++) {
+  for (size_t i = kAStart; i < n_vars; i++) {
     vars_lowerbound[i] = -1.0;
     vars_upperbound[i] = 1.0;
   }
@@ -190,19 +198,19 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     constraints_lowerbound[i] = 0;
     constraints_upperbound[i] = 0;
   }
-  constraints_lowerbound[x_start] = x;
-  constraints_lowerbound[y_start] = y;
-  constraints_lowerbound[psi_start] = psi;
-  constraints_lowerbound[v_start] = v;
-  constraints_lowerbound[cte_start] = cte;
-  constraints_lowerbound[epsi_start] = epsi;
+  constraints_lowerbound[kXStart] = x;
+  constraints_lowerbound[kYStart] = y;
+  constraints_lowerbound[kPsiStart] = psi;
+  constraints_lowerbound[kVStart] = v;
+  constraints_lowerbound[kCteStart] = cte;
+  constraints_lowerbound[kEpsiStart] = epsi;
 
-  constraints_upperbound[x_start] = x;
-  constraints_upperbound[y_start] = y;
-  constraints_upperbound[psi_start] = psi;
-  constraints_upperbound[v_start] = v;
-  constraints_upperbound[cte_start] = cte;
-  constraints_upperbound[epsi_start] = epsi;
+  constraints_upperbound[kXStart] = x;
+  constraints_upperbound[kYStart] = y;
+  constraints_upperbound[kPsiStart] = psi;
+  constraints_upperbound[kVStart] = v;
+  constraints_upperbound[kCteStart] = cte;
+  constraints_upperbound[kEpsiStart] = epsi;
 
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
@@ -223,7 +231,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   options += "Sparse  true        reverse\n";
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
-  options += "Numeric max_cpu_time          0.5\n";
+  options += "Numeric max_cpu_time          0.05\n";
 
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
@@ -241,13 +249,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   std::cout << "Cost " << cost << std::endl;
 
   vector<double> retsol;
-  retsol.push_back(solution.x[psi_start + 2]);
-  retsol.push_back(solution.x[a_start + 2]);
+  retsol.push_back(solution.x[kPsiStart + 2]);
+  retsol.push_back(solution.x[kAStart + 2]);
 
   for (size_t i = 0; i < N; i++) {
-    retsol.push_back(solution.x[x_start + i]);
-    retsol.push_back(solution.x[y_start + i]);
+    retsol.push_back(solution.x[kXStart + i]);
+    retsol.push_back(solution.x[kYStart + i]);
   }
 
   return retsol;
 }
+}  // namespace mpc_project
