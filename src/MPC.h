@@ -5,6 +5,9 @@
 #include "Eigen-3.3/Eigen/Core"
 namespace mpc_project {
 class MPC {
+ private:
+  Eigen::VectorXd last_state_;
+
  public:
   MPC();
 

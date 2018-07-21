@@ -146,7 +146,7 @@ int main() {
 
           double steer_value = vars[0];
           // v setpoint
-          double vs = vars[1];
+          double vs = vars[1] * 2.;
           double throttle_value = vs;
 
           json msgJson;
@@ -182,7 +182,7 @@ int main() {
 // vehicle's coordinate system
 // the points in the simulator are connected by a Yellow line
 #if 1
-          for (int i = 0; i < 25; i++) {
+          for (int i = 0; i < 40; i++) {
             double dx = i * 1.5;
             next_x_vals.push_back(dx);
             next_y_vals.push_back(polyeval(coeffs, dx));
