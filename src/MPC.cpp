@@ -21,11 +21,11 @@ namespace mpc_project {
 constexpr double Lf = constants::Lf;
 
 constexpr size_t N = constants::N;
-constexpr double dt = 0.1;
+constexpr double dt = 0.11;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 70;
+double ref_v = 90;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -248,7 +248,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   options += "Sparse  true        reverse\n";
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
-  options += "Numeric max_cpu_time          0.5\n";
+  options += "Numeric max_cpu_time          0.15\n";
 
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;

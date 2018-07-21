@@ -81,6 +81,15 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     static Logger measure_log("measurement.csv");
+    static auto last_call_time = std::chrono::system_clock::now();
+    static auto first_call_time = std::chrono::system_clock::now();
+
+    auto current_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> call_dur = current_time - last_call_time;
+    std::chrono::duration<double> run_dur = current_time - first_call_time;
+    cout << "Running for " << run_dur.count() << " Call time = " << call_dur.count() << endl;
+    last_call_time = std::chrono::system_clock::now();
+
     string sdata = string(data).substr(0, length);
     // cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
@@ -182,8 +191,8 @@ int main() {
 // vehicle's coordinate system
 // the points in the simulator are connected by a Yellow line
 #if 1
-          for (int i = 0; i < 40; i++) {
-            double dx = i * 1.5;
+          for (int i = 0; i < 35; i++) {
+            double dx = i * 2;
             next_x_vals.push_back(dx);
             next_y_vals.push_back(polyeval(coeffs, dx));
           }
