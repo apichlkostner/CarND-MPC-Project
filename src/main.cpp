@@ -128,7 +128,7 @@ int main() {
               // std::string msg = "42[\"reset\",{}]";
               // ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-              throttle_test = -1;
+              throttle_test = -0.2;
               cnt = 0;
             }
             const double a = (v - v_last) / call_dur.count();
@@ -195,17 +195,11 @@ int main() {
           // accumulated_time += calc_time;
 
           double steer_value = vars[0];
-// v setpoint
-#if 0
-          const double max_a = constants::kMph2mps * (11. - 0.1 * v);
-          double vs = vars[1] / max_a;
-#else
-          double a = vars[1];
-#endif
+          double acceleration = vars[1];
 
-          double throttle_value = vehicle.CalcThrottle(a, v);
+          double throttle_value = vehicle.CalcThrottle(acceleration, v);
 
-          cout << "a = " << a << " v = " << v << " throttle = " << throttle_value
+          cout << "a = " << acceleration << " v = " << v << " throttle = " << throttle_value
                << endl;
 
 #if ACC_TEST

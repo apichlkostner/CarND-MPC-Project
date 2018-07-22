@@ -183,7 +183,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // The upper and lower limits of delta are set to -25 and 25
   // degrees (values in radians).
-  // NOTE: Feel free to change this to something else.
   for (size_t i = kDeltaStart; i < kAStart; i++) {
     vars_lowerbound[i] = -0.436332;
     vars_upperbound[i] = 0.436332;
@@ -195,9 +194,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // Acceleration/decceleration upper and lower limits.
-  // NOTE: Feel free to change this to something else.
   for (size_t i = kAStart; i < n_vars; i++) {
-    //const double max_a = constants::kMph2mps * (11. - 0.1 * v);
     vars_lowerbound[i] = vehicle.MinAcceleration(v);
     vars_upperbound[i] = vehicle.MaxAcceleration(v);
   }

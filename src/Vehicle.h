@@ -6,8 +6,6 @@
 
 namespace mpc_project {
 
-constexpr double kBrakeCoef = 20.;
-
 class Vehicle {
  public:
   Vehicle() : acc_coef_(3), throttle_coef_(3) {
@@ -25,15 +23,22 @@ class Vehicle {
       a = acc_coef_[0] * throttle + acc_coef_[1] * v + acc_coef_[2] * v * v;
     } else {
       // Good model for braking is missing
-      a = throttle * kBrakeCoef;
+      a = throttle * constants::kBrakeCoef;
     }
 
     return a;
   }
 
-  double MaxAcceleration(double v) { return CalcAcceleration(1., v); }
-  
-  double MinAcceleration(double v) { return -kBrakeCoef; }
+  double MaxAcceleration(double v) {
+    // maximum acceleration with maximum trottle
+    return CalcAcceleration(1., v);
+  }
+
+  double MinAcceleration(double v) {
+    // brake force seems to be constant for higher velocities
+    // since the vehicle is always relatively fast this is precise enough
+    return -constants::kBrakeCoef;
+  }
 
   double CalcThrottle(double a, double v) {
     v /= constants::kVSim2metric;
@@ -45,7 +50,7 @@ class Vehicle {
                  throttle_coef_[2] * v * v;
     } else {
       // Good model for braking is missing
-      throttle = a / kBrakeCoef;
+      throttle = a / constants::kBrakeCoef;
     }
 
     if (throttle > 1.)
@@ -59,6 +64,6 @@ class Vehicle {
  private:
   Eigen::VectorXd acc_coef_;
   Eigen::VectorXd throttle_coef_;
-};  // namespace mpc_project
+};
 }  // namespace mpc_project
 #endif

@@ -12,6 +12,7 @@ class constants {
   static constexpr double Lf = 2.67;
   static constexpr double kMph2mps = 0.44;
   static constexpr double kVSim2metric = 1.;
+  static constexpr double kBrakeCoef = 20.;
 };
 }  // namespace mpc_project
 
