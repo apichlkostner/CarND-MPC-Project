@@ -4,20 +4,20 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include "AccelerationMeasurement.h"
+#include "Config.h"
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "Logger.h"
 #include "MPC.h"
+#include "TimeUtils.h"
 #include "Vehicle.h"
-#include "constants.h"
 #include "json.hpp"
 
 // for convenience
 using json = nlohmann::json;
 using namespace std;
 using namespace mpc_project;
-
-#define ACC_TEST 0
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -75,38 +75,27 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 int main() {
   uWS::Hub h;
 
-  // MPC is initialized here!
+  // MPC
   MPC mpc;
 
-  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+  // vehicle dependent calculations
+  Vehicle vehicle;
+
+  h.onMessage([&mpc, &vehicle](uWS::WebSocket<uWS::SERVER> ws, char *data,
+                               size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
-    static auto last_call_time = std::chrono::system_clock::now();
-    static auto first_call_time = std::chrono::system_clock::now();
-    static Vehicle vehicle;
 
-#if ACC_TEST
-    static double v_last, x_last, y_last;
-    static Logger measure_log("measurement3.csv");
-#endif
-
-    auto current_time = std::chrono::system_clock::now();
-    std::chrono::duration<double> call_dur = current_time - last_call_time;
-    std::chrono::duration<double> run_dur = current_time - first_call_time;
-#if !ACC_TEST
-    cout << "Running for " << run_dur.count()
-         << " Call time = " << call_dur.count() << endl;
-#endif
-    last_call_time = std::chrono::system_clock::now();
+    // time measurement
+    static TimeMeasurement time_meas;
+    time_meas.BeginGlobalMeasurement();
 
     string sdata = string(data).substr(0, length);
-    // cout << sdata << endl;
+
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
-        static double time_average = 0.;
         auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
@@ -117,34 +106,9 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-          v *= constants::kVSim2metric;
 
-#if ACC_TEST
-          static double throttle_test = 1.0;
-          {
-            static int cnt;
-
-            if (++cnt > 70) {
-              // std::string msg = "42[\"reset\",{}]";
-              // ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-
-              throttle_test = -0.2;
-              cnt = 0;
-            }
-            const double a = (v - v_last) / call_dur.count();
-            const double s = sqrt((px - x_last) * (px - x_last) +
-                                  (py - y_last) * (py - y_last));
-            cout << " v = " << v << " s = " << s
-                 << " s_expected = " << v * call_dur.count() << " a = " << a
-                 << " throttle " << throttle_test << endl;
-
-            vector<double> logdata{throttle_test, v, a};
-            measure_log.log("", logdata);
-            v_last = v;
-            x_last = px;
-            y_last = py;
-          }
-#endif
+          // change unit if necessary
+          v *= Config::kVSim2metric;
 
           // cross track error
           assert(ptsx.size() == ptsy.size());
@@ -152,6 +116,7 @@ int main() {
           Eigen::VectorXd ptsx_loc(ptsx.size());
           Eigen::VectorXd ptsy_loc(ptsy.size());
 
+          // transform waypoints from global to cars reference system
           for (size_t i = 0; i < ptsx.size(); i++) {
             const double dx = ptsx[i] - px;
             const double dy = ptsy[i] - py;
@@ -160,91 +125,74 @@ int main() {
             ptsy_loc[i] = dx * sin(-psi) + dy * cos(-psi);
           }
 
+          // fit polynomial and calculate first error values
           auto coeffs = polyfit(ptsx_loc, ptsy_loc, 3);
-          double epsi = atan(coeffs[1]);
-#if 1
+          double e_psi = atan(coeffs[1]);
           double cte = polyeval(coeffs, 0);
-#else
-          double cte = cos(epsi) * polyeval(coeffs, 0);
-#endif
 
           Eigen::VectorXd state(6);
           // in car refernce system pos_x = pos_y = psi = 0
-          state << 0, 0, 0, v, cte, epsi;
+          //       x  y psi v  cte  error_psi
+          state << 0, 0, 0, v, cte, e_psi;
 
-          auto start_time = std::chrono::system_clock::now();
+          time_meas.StartInnerMeasurement();
 
+          ///
+          /// solve mpc equations
+          ///
           auto vars = mpc.Solve(state, coeffs);
 
-          auto end_time = std::chrono::system_clock::now();
-          std::chrono::duration<double> dur = end_time - start_time;
-          double calc_time = dur.count();
-          constexpr double fak_mov_average = 0.99;
+          time_meas.EndInnerMeasurement();
 
-          if (time_average == 0.)
-            time_average = calc_time;
-          else
-            time_average = fak_mov_average * time_average +
-                           (1. - fak_mov_average) * calc_time;
-
-#if !ACC_TEST
-          std::cout << "Average time = " << time_average
-                    << " Calc time = " << calc_time << std::endl;
-#endif
-
-          // accumulated_time += calc_time;
-
-          double steer_value = vars[0];
+          // first two values are steering angle and acceleration
+          double steer_value = vars[0];  // degree
           double acceleration = vars[1];
 
+          // throttle value from given acceration
           double throttle_value = vehicle.CalcThrottle(acceleration, v);
 
-          cout << "a = " << acceleration << " v = " << v << " throttle = " << throttle_value
-               << endl;
+          cout << "a = " << acceleration << " v = " << v
+               << " throttle = " << throttle_value << endl;
 
 #if ACC_TEST
-          throttle_value = throttle_test;
+          // override throttle value to test different values to build a model
+          static AccelerationMeasurement acc_meas;
+
+          throttle_value =
+              acc_meas.GetNewThrottle(v, px, py, time_meas.DtGlob());
 #endif
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the
-          // steering value back. Otherwise the values will be in between
-          // [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+
           msgJson["steering_angle"] = -steer_value / deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
-          //(mat.data(), mat.data() + mat.rows() * mat.cols());
-
           vector<double> mpc_y_vals;
 
-          for (size_t i = 0; i < constants::N; i++) {
+          for (size_t i = 0; i < Config::N; i++) {
             mpc_x_vals.push_back(vars[2 + 2 * i]);
             mpc_y_vals.push_back(vars[3 + 2 * i]);
           }
 
-          //.. add (x,y) points to list here, points are in reference to the
-          // vehicle's coordinate system
-          // the points in the simulator are connected by a Green line
-
+          // show predicted waypoints as green line in simulator
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          // Display the waypoints/reference line
+          // display waypoints/reference line as yellow line in simulator
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-//.. add (x,y) points to list here, points are in reference to the
-// vehicle's coordinate system
-// the points in the simulator are connected by a Yellow line
-#if 1
+#if DRAW_REFERENCE_POLYNOMIAL
+          // yellow reference trajectory -> polynomial
           for (int i = 0; i < 35; i++) {
             double dx = i * 2;
             next_x_vals.push_back(dx);
             next_y_vals.push_back(polyeval(coeffs, dx));
           }
 #else
+          // yellow reference trajectory -> original waypoints
           for (size_t i = 0; i < ptsx.size(); i++) {
             next_x_vals.push_back(ptsx_loc[i]);
             next_y_vals.push_back(ptsy_loc[i]);
@@ -259,13 +207,8 @@ int main() {
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.
-          //
-          // Feel free to play around with this value but should be to drive
-          // around the track with 100ms latency.
-          //
-          // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-          // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(100));
+
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

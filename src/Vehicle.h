@@ -2,7 +2,7 @@
 #define VEHICLE_H_
 
 #include "Eigen-3.3/Eigen/Core"
-#include "constants.h"
+#include "Config.h"
 
 namespace mpc_project {
 
@@ -16,14 +16,14 @@ class Vehicle {
   virtual ~Vehicle() {}
 
   double CalcAcceleration(double throttle, double v) {
-    v /= constants::kVSim2metric;
+    v /= Config::kVSim2metric;
 
     double a;
     if (throttle > 0.) {
       a = acc_coef_[0] * throttle + acc_coef_[1] * v + acc_coef_[2] * v * v;
     } else {
       // Good model for braking is missing
-      a = throttle * constants::kBrakeCoef;
+      a = throttle * Config::kBrakeCoef;
     }
 
     return a;
@@ -37,11 +37,11 @@ class Vehicle {
   double MinAcceleration(double v) {
     // brake force seems to be constant for higher velocities
     // since the vehicle is always relatively fast this is precise enough
-    return -constants::kBrakeCoef;
+    return -Config::kBrakeCoef;
   }
 
   double CalcThrottle(double a, double v) {
-    v /= constants::kVSim2metric;
+    v /= Config::kVSim2metric;
 
     double throttle;
 
@@ -50,7 +50,7 @@ class Vehicle {
                  throttle_coef_[2] * v * v;
     } else {
       // Good model for braking is missing
-      throttle = a / constants::kBrakeCoef;
+      throttle = a / Config::kBrakeCoef;
     }
 
     if (throttle > 1.)
