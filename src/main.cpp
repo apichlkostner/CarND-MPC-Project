@@ -8,6 +8,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "Logger.h"
 #include "MPC.h"
+#include "Vehicle.h"
 #include "constants.h"
 #include "json.hpp"
 
@@ -15,6 +16,8 @@
 using json = nlohmann::json;
 using namespace std;
 using namespace mpc_project;
+
+#define ACC_TEST 0
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -80,14 +83,22 @@ int main() {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
-    static Logger measure_log("measurement.csv");
     static auto last_call_time = std::chrono::system_clock::now();
     static auto first_call_time = std::chrono::system_clock::now();
+    static Vehicle vehicle;
+
+#if ACC_TEST
+    static double v_last, x_last, y_last;
+    static Logger measure_log("measurement3.csv");
+#endif
 
     auto current_time = std::chrono::system_clock::now();
     std::chrono::duration<double> call_dur = current_time - last_call_time;
     std::chrono::duration<double> run_dur = current_time - first_call_time;
-    cout << "Running for " << run_dur.count() << " Call time = " << call_dur.count() << endl;
+#if !ACC_TEST
+    cout << "Running for " << run_dur.count()
+         << " Call time = " << call_dur.count() << endl;
+#endif
     last_call_time = std::chrono::system_clock::now();
 
     string sdata = string(data).substr(0, length);
@@ -106,6 +117,34 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          v *= constants::kVSim2metric;
+
+#if ACC_TEST
+          static double throttle_test = 1.0;
+          {
+            static int cnt;
+
+            if (++cnt > 70) {
+              // std::string msg = "42[\"reset\",{}]";
+              // ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+              throttle_test = -1;
+              cnt = 0;
+            }
+            const double a = (v - v_last) / call_dur.count();
+            const double s = sqrt((px - x_last) * (px - x_last) +
+                                  (py - y_last) * (py - y_last));
+            cout << " v = " << v << " s = " << s
+                 << " s_expected = " << v * call_dur.count() << " a = " << a
+                 << " throttle " << throttle_test << endl;
+
+            vector<double> logdata{throttle_test, v, a};
+            measure_log.log("", logdata);
+            v_last = v;
+            x_last = px;
+            y_last = py;
+          }
+#endif
 
           // cross track error
           assert(ptsx.size() == ptsy.size());
@@ -148,15 +187,30 @@ int main() {
             time_average = fak_mov_average * time_average +
                            (1. - fak_mov_average) * calc_time;
 
+#if !ACC_TEST
           std::cout << "Average time = " << time_average
                     << " Calc time = " << calc_time << std::endl;
+#endif
 
           // accumulated_time += calc_time;
 
           double steer_value = vars[0];
-          // v setpoint
-          double vs = vars[1] * 2.;
-          double throttle_value = vs;
+// v setpoint
+#if 0
+          const double max_a = constants::kMph2mps * (11. - 0.1 * v);
+          double vs = vars[1] / max_a;
+#else
+          double a = vars[1];
+#endif
+
+          double throttle_value = vehicle.CalcThrottle(a, v);
+
+          cout << "a = " << a << " v = " << v << " throttle = " << throttle_value
+               << endl;
+
+#if ACC_TEST
+          throttle_value = throttle_test;
+#endif
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the

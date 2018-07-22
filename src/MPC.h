@@ -3,10 +3,12 @@
 
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
+#include "Vehicle.h"
 namespace mpc_project {
 class MPC {
  private:
   Eigen::VectorXd last_state_;
+  Vehicle vehicle;
 
  public:
   MPC();

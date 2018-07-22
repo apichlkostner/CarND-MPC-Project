@@ -25,7 +25,7 @@ constexpr double dt = 0.11;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 90;
+double ref_v = 90 * constants::kVSim2metric;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -64,8 +64,8 @@ class FG_eval {
       fg[kCostPos] += 100 * epsi * epsi;
       fg[kCostPos] += 0.1 * v * v;
 #else
-      fg[kCostPos] += 5000 * CppAD::pow(vars[kCteStart + t], 2);
-      fg[kCostPos] += 12000 * CppAD::pow(vars[kEpsiStart + t], 2);
+      fg[kCostPos] += 6000 * CppAD::pow(vars[kCteStart + t], 2);
+      fg[kCostPos] += 30000 * CppAD::pow(vars[kEpsiStart + t], 2);
       fg[kCostPos] += 0.6 * CppAD::pow(vars[kVStart + t] - ref_v, 2);
 #endif
     }
@@ -135,7 +135,7 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() : last_state_(6) { last_state_ << -10000, 0, 0, 0, 0, 0; }
+MPC::MPC() : last_state_(6), vehicle() { last_state_ << -10000, 0, 0, 0, 0, 0; }
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -197,8 +197,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Acceleration/decceleration upper and lower limits.
   // NOTE: Feel free to change this to something else.
   for (size_t i = kAStart; i < n_vars; i++) {
-    vars_lowerbound[i] = -0.5;
-    vars_upperbound[i] = 0.5;
+    //const double max_a = constants::kMph2mps * (11. - 0.1 * v);
+    vars_lowerbound[i] = vehicle.MinAcceleration(v);
+    vars_upperbound[i] = vehicle.MaxAcceleration(v);
   }
 
     if (last_state_[0] != -10000) {
