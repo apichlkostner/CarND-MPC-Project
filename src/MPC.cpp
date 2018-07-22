@@ -25,7 +25,7 @@ constexpr double dt = 0.11;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 90 * constants::kVSim2metric;
+double ref_v = 100 * constants::kVSim2metric;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
