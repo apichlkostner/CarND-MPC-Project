@@ -3,10 +3,10 @@
 
 // Enable acceleration test to measure the dependencies
 // between throttle, velocity and acceleration of the vehicle
-#define ACC_TEST 0
+#define ACC_TEST 1
 // 1 -> draw polynomials as reference
 // 0 -> draw waypoints as reference)
-#define DRAW_REFERENCE_POLYNOMIAL 1
+#define DRAW_REFERENCE_POLYNOMIAL 0
 
 // Enable time measurement
 #define TIME_MEASUREMENT 1
@@ -26,22 +26,6 @@ class Config {
   static constexpr double kFacPenaltyStrengthActAcc = 3.;
   static constexpr double kFacPenaltyGradientSteer = 100.;
   static constexpr double kFacPenaltyGradientAcc = 5.;
-
-  //   static constexpr double kFacPenaltyErrorCte = 1500.;
-  // static constexpr double kFacPenaltyErrorPsi = 15000000.;
-  // static constexpr double kFacPenaltyErrorVelocity = 200;
-  // static constexpr double kFacPenaltyStrengthActSteer = 2000.;
-  // static constexpr double kFacPenaltyStrengthActAcc = 3.;
-  // static constexpr double kFacPenaltyGradientSteer = 100.;
-  // static constexpr double kFacPenaltyGradientAcc = 5.;
-
-  // static constexpr double kFacPenaltyErrorCte = 1500.;
-  // static constexpr double kFacPenaltyErrorPsi = 12000000.;
-  // static constexpr double kFacPenaltyErrorVelocity = 200;
-  // static constexpr double kFacPenaltyStrengthActSteer = 2000.;
-  // static constexpr double kFacPenaltyStrengthActAcc = 3.;
-  // static constexpr double kFacPenaltyGradientSteer = 100.;
-  // static constexpr double kFacPenaltyGradientAcc = 10.;
 
   static constexpr double kLf = 2.67;
   static constexpr double kMph2mps = 0.447;

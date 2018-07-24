@@ -75,11 +75,11 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 int main() {
   uWS::Hub h;
 
-  // MPC
-  MPC mpc;
-
   // vehicle dependent calculations
   Vehicle vehicle;
+   
+  // MPC
+  MPC mpc("../src/Config.json");
 
   h.onMessage([&mpc, &vehicle](uWS::WebSocket<uWS::SERVER> ws, char *data,
                                size_t length, uWS::OpCode opCode) {
@@ -184,10 +184,10 @@ int main() {
                                   last_pred_pos_y * last_pred_pos_y);
           double dex = px - last_pos_x;
           double dey = py - last_pos_y;
-          double real_dist = sqrt(dex*dex+dey*dey);
+          double real_dist = sqrt(dex * dex + dey * dey);
           cout << "predicted " << pred_dist << " real " << real_dist << endl;
 
-          last_pred_pos_x = vars[4] ;
+          last_pred_pos_x = vars[4];
           last_pred_pos_y = vars[5];
           last_pos_x = px;
           last_pos_y = py;

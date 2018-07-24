@@ -8,18 +8,6 @@ using CppAD::AD;
 using namespace std;
 
 namespace mpc_project {
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
-double ref_v = Config::kVTarget * Config::kVSim2metric;
-
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
 // when one variable starts and another ends to make our lifes easier.
@@ -34,9 +22,9 @@ constexpr size_t kAStart = kDeltaStart + Config::N - 1;
 
 class FG_eval {
  public:
-  Eigen::VectorXd coeffs_;
   // Coefficients of the fitted polynomial.
-  FG_eval(Eigen::VectorXd coeffs) : coeffs_(coeffs){};
+  FG_eval(Eigen::VectorXd coeffs, double v_target)
+      : coeffs_(coeffs), v_target_(v_target){};
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   // `fg` is a vector containing the cost and constraints.
@@ -54,7 +42,7 @@ class FG_eval {
       fg[kCostPos] +=
           Config::kFacPenaltyErrorPsi * CppAD::pow(vars[kEpsiStart + t], 2);
       fg[kCostPos] += Config::kFacPenaltyErrorVelocity *
-                      CppAD::pow(vars[kVStart + t] - ref_v, 2);
+                      CppAD::pow(vars[kVStart + t] - v_target_, 2);
     }
 
     // Minimize the use of actuators.
@@ -122,12 +110,31 @@ class FG_eval {
           epsi1 - ((psi0 - psi_des0) - v0 * delta0 / Config::kLf * Config::kDt);
     }
   }
+
+ private:
+  Eigen::VectorXd coeffs_;
+  double v_target_;
 };
+
+MPC::MPC(const std::string config) : MPC() {
+    std::ifstream config_file(config);
+    string config_string((istreambuf_iterator<char>(config_file)),
+                         istreambuf_iterator<char>());
+
+    nlohmann::json config_json = nlohmann::json::parse(config_string);
+    
+    N_ = config_json["N"];
+    dt_ = config_json["dt"];
+    v_target_ = config_json["v_target"];
+    v_target_ *= Config::kVSim2metric;
+
+    std::cout << "Created MPC with N = " << N_ << " dt = " << dt_
+              << " v_target = " << v_target_ << std::endl;
+  }
 
 //
 // MPC class definition implementation.
 //
-MPC::MPC() : last_state_(6), vehicle() { last_state_ << -10000, 0, 0, 0, 0, 0; }
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -223,7 +230,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[kEpsiStart] = epsi;
 
   // object that computes objective and constraints
-  FG_eval fg_eval(coeffs);
+  FG_eval fg_eval(coeffs, v_target_);
 
   //
   // NOTE: You don't have to worry about these options
