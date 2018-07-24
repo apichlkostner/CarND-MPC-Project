@@ -15,21 +15,37 @@ namespace mpc_project {
 class Config {
  public:
   static constexpr size_t N = 11;
-  static constexpr double kDt = 0.11;
-  static constexpr double kVTarget = 90;
+  static constexpr double kDt = 0.12;
+  static constexpr double kVTarget = 120;
 
   // penalty factor for cost function
-  static constexpr double kFacPenaltyErrorCte = 6000.;
-  static constexpr double kFacPenaltyErrorPsi = 30000.;
-  static constexpr double kFacPenaltyErrorVelocity = 0.6;
-  static constexpr double kFacPenaltyStrengthActSteer = 3.;
+  static constexpr double kFacPenaltyErrorCte = 3000.;
+  static constexpr double kFacPenaltyErrorPsi = 30000000.;
+  static constexpr double kFacPenaltyErrorVelocity = 150;
+  static constexpr double kFacPenaltyStrengthActSteer = 2000.;
   static constexpr double kFacPenaltyStrengthActAcc = 3.;
-  static constexpr double kFacPenaltyGradientSteer = 200.;
-  static constexpr double kFacPenaltyGradientAcc = 10.;
+  static constexpr double kFacPenaltyGradientSteer = 100.;
+  static constexpr double kFacPenaltyGradientAcc = 5.;
+
+  //   static constexpr double kFacPenaltyErrorCte = 1500.;
+  // static constexpr double kFacPenaltyErrorPsi = 15000000.;
+  // static constexpr double kFacPenaltyErrorVelocity = 200;
+  // static constexpr double kFacPenaltyStrengthActSteer = 2000.;
+  // static constexpr double kFacPenaltyStrengthActAcc = 3.;
+  // static constexpr double kFacPenaltyGradientSteer = 100.;
+  // static constexpr double kFacPenaltyGradientAcc = 5.;
+
+  // static constexpr double kFacPenaltyErrorCte = 1500.;
+  // static constexpr double kFacPenaltyErrorPsi = 12000000.;
+  // static constexpr double kFacPenaltyErrorVelocity = 200;
+  // static constexpr double kFacPenaltyStrengthActSteer = 2000.;
+  // static constexpr double kFacPenaltyStrengthActAcc = 3.;
+  // static constexpr double kFacPenaltyGradientSteer = 100.;
+  // static constexpr double kFacPenaltyGradientAcc = 10.;
 
   static constexpr double kLf = 2.67;
-  static constexpr double kMph2mps = 0.44;
-  static constexpr double kVSim2metric = 1.;
+  static constexpr double kMph2mps = 0.447;
+  static constexpr double kVSim2metric = kMph2mps;
   static constexpr double kBrakeCoef = 20.;
 };
 }  // namespace mpc_project

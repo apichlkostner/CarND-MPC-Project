@@ -171,6 +171,27 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
+#if 1
+          static double last_pred_pos_x;
+          static double last_pred_pos_y;
+          static double last_pos_x;
+          static double last_pos_y;
+
+          // cout << "predicted (" << last_pred_pos_x << ", " << last_pred_pos_y
+          //      << ") real (" << px << ", " << py << ")" << std::endl;
+
+          double pred_dist = sqrt(last_pred_pos_x * last_pred_pos_x +
+                                  last_pred_pos_y * last_pred_pos_y);
+          double dex = px - last_pos_x;
+          double dey = py - last_pos_y;
+          double real_dist = sqrt(dex*dex+dey*dey);
+          cout << "predicted " << pred_dist << " real " << real_dist << endl;
+
+          last_pred_pos_x = vars[4] ;
+          last_pred_pos_y = vars[5];
+          last_pos_x = px;
+          last_pos_y = py;
+#endif
           for (size_t i = 0; i < Config::N; i++) {
             mpc_x_vals.push_back(vars[2 + 2 * i]);
             mpc_y_vals.push_back(vars[3 + 2 * i]);
