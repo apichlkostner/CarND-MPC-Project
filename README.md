@@ -16,20 +16,26 @@ This project implements a model predictive controller to control velocity and st
 
 ![Image of simulator](docu/simulator01.png)
 
-![video of result](docu/mpc_slow_small.mp4)
+![Video with low speed](docu/mpc_slow_small.mp4)
 
-![video of result](docu/mpc_fast_small.mp4)
+![video with high speed](docu/mpc_fast_small.mp4)
 
 ## The model
 
+A simple kinematic model was choosen.
+
 ### State
 
-x, y, psi, v
+The car's state is defined by
+- position in x and y direction
+- Orientation psi
+- scalar velocity v
 
 ### Actuators
 
-- Throttle [-1, 1]
-- Steering angle [-1, 1]
+The controller can use the following actuators
+- Throttle in range [-1, 1] which has to be converted to acceleration
+- Steering angle in range [-1, 1] which is converted to [-25°, +25°] by the simulator
 
 ### Update equations
 
@@ -52,18 +58,44 @@ Not enough steps -> instability
 -> 11 steps
 
 Delta_t good about 100ms, choosen as latency (100ms + simulator latency = about 120ms).
-Prediction for latency could also be done as separate step.
+Prediction for latency could also be done as separate step but here the values match.
 
 ### Trajectory as polynomials
 
-- coordinate transformation of waypoints from world to vehicle system
-- fit polynomial
+The target trajectory is calculated from the given waypoints.
+
+First the waypoints are transformed from world to car coordinates. Then a third order polynomia is fit to the waypoints.
+
+The parameters are given to the MPC as values for the target trajectory.
 
 ### Latency
 
-- Timestep = delay
-- One timestep with fixed actuator values from last controller output
+Since the delay is about the same as a good delta_t in our case it was choosen to use the delay plus the delay from the simulator as delta_t.
 
+The complete delay is calculated online and the mean value calculated as an exponential average is used as delta_t.
+
+To handle the delay the MPC calculates the first timestep with fixed actuator controls from the last timestep.
+
+### Error function
+
+Penalizes:
+- cross track error
+- wrong heading
+- wrong velocity
+- strong steering
+- strong acceleration
+- strong change in steering
+- strong change in acceleration
+
+For high velocities:
+- it must be allowed that the car leaves the target trajectory without leaving the track -> medium penalty
+- heading should be very exact as given by target trajectory -> high penalty
+- velocity should be as large as possible but should be reduced in curves -> medium penalty
+- acceleration and change of acceleration should be allowed to be large for fast speeds -> low penalty
+- steering angle might be high -> low penalty
+- but change in steering angle should be not so high -> medium penalty
+
+Since the values have different scales the parameter for each error type might also be in different scale.
 
 ## Measurement on the simulator units
 
