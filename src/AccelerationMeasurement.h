@@ -15,7 +15,7 @@ enum class MeasureCase {
 class AccelerationMeasurement {
  public:
   AccelerationMeasurement()
-      : measure_log_("measurement3.csv"), throttle_value_(1.)  {}
+      : measure_log_("measurement10.csv"), throttle_value_(.2)  {}
 
   double GetNewThrottle(double v, double px, double py, double dt) {
       static int cnt;
@@ -23,10 +23,10 @@ class AccelerationMeasurement {
       //const MeasureCase meas_case = MeasureCase::Breaking;
 
       //if (meas_case == MeasureCase::Breaking)
-
-      constexpr int SWITCH_AFTER = 70;
+      
+      constexpr int SWITCH_AFTER = 150;
       if (++cnt > SWITCH_AFTER) {
-        throttle_value_ = 0.6;
+        throttle_value_ = 0.0;
         cnt = 0;
       }
       const double a = (v - v_last_) / dt;
