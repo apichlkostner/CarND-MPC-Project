@@ -11,14 +11,14 @@ namespace mpc_project {
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
 // when one variable starts and another ends to make our lifes easier.
-constexpr size_t kXStart = 0;
-constexpr size_t kYStart = kXStart + Config::N;
-constexpr size_t kPsiStart = kYStart + Config::N;
-constexpr size_t kVStart = kPsiStart + Config::N;
-constexpr size_t kCteStart = kVStart + Config::N;
-constexpr size_t kEpsiStart = kCteStart + Config::N;
-constexpr size_t kDeltaStart = kEpsiStart + Config::N;
-constexpr size_t kAStart = kDeltaStart + Config::N - 1;
+size_t& kXStart = Config::kXStart;
+size_t& kYStart = Config::kYStart;
+size_t& kPsiStart = Config::kPsiStart;
+size_t& kVStart = Config::kVStart;
+size_t& kCteStart = Config::kCteStart;
+size_t& kEpsiStart =Config::kEpsiStart;
+size_t& kDeltaStart = Config::kDeltaStart;
+size_t& kAStart = Config::kAStart;
 
 class FG_eval {
  public:
@@ -116,21 +116,7 @@ class FG_eval {
   double v_target_;
 };
 
-MPC::MPC(const std::string config) : MPC() {
-    std::ifstream config_file(config);
-    string config_string((istreambuf_iterator<char>(config_file)),
-                         istreambuf_iterator<char>());
 
-    nlohmann::json config_json = nlohmann::json::parse(config_string);
-    
-    N_ = config_json["N"];
-    dt_ = config_json["dt"];
-    v_target_ = config_json["v_target"];
-    v_target_ *= Config::kVSim2metric;
-
-    std::cout << "Created MPC with N = " << N_ << " dt = " << dt_
-              << " v_target = " << v_target_ << std::endl;
-  }
 
 //
 // MPC class definition implementation.
@@ -143,9 +129,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // number of independent variables
   // N timesteps == N - 1 actuations
-  constexpr size_t n_vars = Config::N * 6 + (Config::N - 1) * 2;
+  const size_t n_vars = Config::N * 6 + (Config::N - 1) * 2;
   // Number of constraints
-  constexpr size_t n_constraints = Config::N * 6;
+  const size_t n_constraints = Config::N * 6;
 
   double x = state[0];
   double y = state[1];
@@ -230,7 +216,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[kEpsiStart] = epsi;
 
   // object that computes objective and constraints
-  FG_eval fg_eval(coeffs, v_target_);
+  FG_eval fg_eval(coeffs, Config::kVTarget);
 
   //
   // NOTE: You don't have to worry about these options

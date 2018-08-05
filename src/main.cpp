@@ -73,14 +73,19 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 int main() {
-  uWS::Hub h;
+  // Initialization of configuration
+  Config::ReadConfig("../src/Config.json");
 
   // vehicle dependent calculations
   Vehicle vehicle;
    
-  // MPC
-  MPC mpc("../src/Config.json");
+  // Model Predicitve Controller
+  MPC mpc;
 
+  // Server to connect with simulator
+  uWS::Hub h;
+
+  // Callback for communication with simulator
   h.onMessage([&mpc, &vehicle](uWS::WebSocket<uWS::SERVER> ws, char *data,
                                size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.

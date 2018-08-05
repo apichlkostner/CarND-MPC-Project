@@ -3,10 +3,10 @@
     "dt": 0.12,
     "v_target": 120,
     "kFacPenaltyErrorCte": 3000,
-    "kFacPenaltyErrorPsi": 30000000,
-    "kFacPenaltyErrorVelocity": 150,
-    "kFacPenaltyStrengthActSteer": 2000,
+    "kFacPenaltyErrorPsi": 50000000,
+    "kFacPenaltyErrorVelocity": 600,
+    "kFacPenaltyStrengthActSteer": 200,
     "kFacPenaltyStrengthActAcc": 3,
-    "kFacPenaltyGradientSteer": 100,
-    "kFacPenaltyGradientAcc": 5
+    "kFacPenaltyGradientSteer": 10,
+    "kFacPenaltyGradientAcc": 1
 }

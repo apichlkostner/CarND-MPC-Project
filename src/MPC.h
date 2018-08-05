@@ -12,12 +12,6 @@ class MPC {
  public:
   MPC() : last_state_(6), vehicle() {
     last_state_ << -10000, 0, 0, 0, 0, 0;
-    N_ = Config::N;
-    dt_ = Config::kDt;
-    v_target_ = Config::kVTarget * Config::kVSim2metric;
-
-    std::cout << "Created MPC with N = " << N_ << " dt = " << dt_
-              << " v_target = " << v_target_ << std::endl;
   }
 
   MPC(const std::string config);
@@ -31,9 +25,6 @@ class MPC {
  private:
   Eigen::VectorXd last_state_;
   Vehicle vehicle;
-  size_t N_;
-  double dt_;
-  double v_target_;
 };
 }  // namespace mpc_project
 #endif /* MPC_H */
