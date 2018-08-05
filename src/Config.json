@@ -1,12 +1,12 @@
 {
     "N": 11,
     "dt": 0.12,
-    "v_target": 120,
-    "kFacPenaltyErrorCte": 3000,
-    "kFacPenaltyErrorPsi": 50000000,
-    "kFacPenaltyErrorVelocity": 600,
-    "kFacPenaltyStrengthActSteer": 200,
-    "kFacPenaltyStrengthActAcc": 3,
-    "kFacPenaltyGradientSteer": 10,
+    "v_target": 130,
+    "kFacPenaltyErrorCte": 200000000,
+    "kFacPenaltyErrorPsi": 10000000000,
+    "kFacPenaltyErrorVelocity": 80000,
+    "kFacPenaltyStrengthActSteer": 20,
+    "kFacPenaltyStrengthActAcc": 1,
+    "kFacPenaltyGradientSteer": 1000,
     "kFacPenaltyGradientAcc": 1
 }

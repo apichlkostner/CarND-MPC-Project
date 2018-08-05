@@ -175,8 +175,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   if (last_state_[0] != -10000) {
     vars_lowerbound[kDeltaStart] = last_state_[3];
     vars_upperbound[kDeltaStart] = last_state_[3];
-    vars_lowerbound[kDeltaStart + 1] = last_state_[3];
-    vars_upperbound[kDeltaStart + 1] = last_state_[3];
   }
 
   // Acceleration/decceleration upper and lower limits.
@@ -188,8 +186,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   if (last_state_[0] != -10000) {
     vars_lowerbound[kAStart] = last_state_[5];
     vars_upperbound[kAStart] = last_state_[5];
-    vars_lowerbound[kAStart + 1] = last_state_[5];
-    vars_upperbound[kAStart + 1] = last_state_[5];
   }
 
   // Lower and upper limits for constraints
