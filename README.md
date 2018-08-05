@@ -63,8 +63,12 @@ With cte="cross track error" and epsi="Error of target psi and current psi".
 
 First tests were done with N=10 and delta_t=100ms. Then higher and lower values were tested.
 
-With too many steps the trajectory became unstable. The same happened with not enough steps.
-It seems that about 1s forward prediction is best in this case.
+With too many steps the trajectory became unstable, more than 15 gave a bad result. It seems to be too complex to find a good trajectory if the prediction time is too long.
+The same happened with less than 8 steps. Then not enough information of the future reference trajectory can be used for the optimization.
+
+Delta_t can also be choosen higher than 100ms but the length of the predicted trajectory shouldn't be too long. For much lower values of delta_t the prediction was not good enough to create a stable trajectory.
+
+It seems that about 1s to 1.5s forward prediction is best in this case.
 
 The values finally chosen are N=11 and delta_t about 120ms. Since delta_t about 100ms gave a good result the latency between controller and actuator was choosen as delt_t. It's about 110-125ms and is measured dynamically.
 
@@ -82,7 +86,7 @@ Since the delay is about the same as a good delta_t in our case it was choosen t
 
 The complete delay is calculated online and the mean value calculated as an exponential average is used as delta_t.
 
-To handle the delay the MPC calculates the first timestep with fixed actuator controls from the last timestep.
+To handle the delay the MPC calculates the first timestep with fixed actuator controls from the last timestep. This is done in `MPC.cpp` in line 176 and 182.
 
 ### Error function
 
