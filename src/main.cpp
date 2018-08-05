@@ -13,6 +13,7 @@
 #include "TimeUtils.h"
 #include "Vehicle.h"
 #include "json.hpp"
+#include <thread>
 
 // for convenience
 using json = nlohmann::json;
@@ -72,6 +73,14 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+void ReadConfigThread() {
+  do {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::cout << "Update Config" << std::endl;
+    Config::ReadConfig("../src/Config.json");
+  } while(true);
+}
+
 int main() {
   // Initialization of configuration
   Config::ReadConfig("../src/Config.json");
@@ -84,6 +93,8 @@ int main() {
 
   // Server to connect with simulator
   uWS::Hub h;
+
+  std::thread thread1(ReadConfigThread);
 
   // Callback for communication with simulator
   h.onMessage([&mpc, &vehicle](uWS::WebSocket<uWS::SERVER> ws, char *data,

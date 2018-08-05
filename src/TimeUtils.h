@@ -22,11 +22,22 @@ class TimeMeasurement {
     std::chrono::duration<double> call_dur = current_time - last_call_time_;
     std::chrono::duration<double> run_dur = current_time - first_call_time_;
 
-    dt_glob_ = run_dur.count();
+    dt_glob_ = call_dur.count();
+
+    constexpr double fak_mov_average = 0.8;
+
+    if (time_average_ == 0.)
+      dt_average_ = dt_glob_;
+    else
+      dt_average_ =
+          fak_mov_average * dt_average_ + (1. - fak_mov_average) * dt_glob_;
+    // Set dt to delay time
+    Config::kDt = dt_average_;
 
     last_call_time_ = std::chrono::system_clock::now();
 
-    std::cout << "Running for " << dt_glob_ << " Call time = " << dt_glob_
+    std::cout << "Running for " << call_dur.count()
+              << " Call time = " << dt_glob_ << " average = " << dt_average_
               << std::endl;
 #endif
   }
@@ -72,6 +83,7 @@ class TimeMeasurement {
 
   double time_average_;
   double dt_glob_;
+  double dt_average_;
 #endif
 };
 }  // namespace mpc_project
