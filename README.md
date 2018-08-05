@@ -14,11 +14,15 @@ This project implements a model predictive controller to control velocity and st
 
 ## Result
 
+The car can drive relatively smooth around the track. At larger speeds it can't find the optimal trajectory and has to use the brake.
+
 ![Image of simulator](docu/simulator01.png)
 
 ![Video with low speed](docu/mpc_slow_small.mp4)
 
 ![video with high speed](docu/mpc_fast_small.mp4)
+
+The highest velocity achieved was 106 mph. To get higher velocities the sharp turn at the first curve has to be avoided. It forces the controller to brake though it wouldn't be necessary. To further smooth the trajectory an optimized error functions has to be developed.
 
 ## The model
 
@@ -39,6 +43,8 @@ The controller can use the following actuators
 
 ### Update equations
 
+With a kinematic model the predictions of the trajectory are calculated:
+
 x(t+dt) = x(t) + v(t) * cos(psi(t)) * dt
 
 y(t+dt) = y(t) + v(t) * sin(psi(t) * dt
@@ -51,14 +57,16 @@ cte(t+dt) = (f(t) - y(t)) + v(t) * sin(epsi(t) * dt
 
 epsi(t+dt) =(psi(t) - psi_des(t)) - v(t) * delta(t) / Lf * dt
 
+With cte="cross track error" and epsi="Error of target psi and current psi".
+
 ### Number of steps and delta_t
 
-Too many steps -> instability
-Not enough steps -> instability
--> 11 steps
+First tests were done with N=10 and delta_t=100ms. Then higher and lower values were tested.
 
-Delta_t good about 100ms, choosen as latency (100ms + simulator latency = about 120ms).
-Prediction for latency could also be done as separate step but here the values match.
+With too many steps the trajectory became unstable. The same happened with not enough steps.
+It seems that about 1s forward prediction is best in this case.
+
+The values finally chosen are N=11 and delta_t about 120ms. Since delta_t about 100ms gave a good result the latency between controller and actuator was choosen as delt_t. It's about 110-125ms and is measured dynamically.
 
 ### Trajectory as polynomials
 
@@ -93,7 +101,7 @@ For high velocities:
 - velocity should be as large as possible but should be reduced in curves -> medium penalty
 - acceleration and change of acceleration should be allowed to be large for fast speeds -> low penalty
 - steering angle might be high -> low penalty
-- but change in steering angle should be not so high -> medium penalty
+- but change in steering angle should be not so high -> high penalty
 
 Since the values have different scales the parameter for each error type might also be in different scale.
 
